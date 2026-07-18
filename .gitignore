@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# bench/ is a standalone directory outside the pnpm workspace (see bench/package.json) --
+# its tarballs are regenerated from `pnpm pack` on each package before running the bench.
+bench/tarballs/

@@ -1,0 +1,5 @@
+{
+  "main": "../dist/faker/index.cjs",
+  "module": "../dist/faker/index.js",
+  "types": "../dist/faker/index.d.ts"
+}

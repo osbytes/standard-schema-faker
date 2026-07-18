@@ -1,0 +1,7 @@
+# Single-package repo (no `packages:` workspace glob) — this file exists only to carry pnpm
+# settings that pnpm 11 requires here rather than in package.json's now-ignored `pnpm` field.
+allowBuilds:
+  esbuild: true
+
+onlyBuiltDependencies:
+  - esbuild

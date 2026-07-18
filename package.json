@@ -1,0 +1,102 @@
+{
+  "name": "standard-schema-faker",
+  "version": "0.1.0",
+  "description": "Fake data for any Standard Schema validator — Zod, Valibot, ArkType, Effect Schema, and friends. Seeded, typed, zero config. Root entry is a zero-dependency JSON-Schema-driven walker; `standard-schema-faker/faker` adds batteries-included realistic values via @faker-js/faker.",
+  "keywords": [
+    "standard-schema",
+    "faker",
+    "mock",
+    "mocking",
+    "fake-data",
+    "test-data",
+    "zod",
+    "valibot",
+    "arktype",
+    "effect",
+    "json-schema"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./faker": {
+      "import": {
+        "types": "./dist/faker/index.d.ts",
+        "default": "./dist/faker/index.js"
+      },
+      "require": {
+        "types": "./dist/faker/index.d.cts",
+        "default": "./dist/faker/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "faker"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/standard-schema-faker/standard-schema-faker.git"
+  },
+  "homepage": "https://github.com/standard-schema-faker/standard-schema-faker#readme",
+  "bugs": {
+    "url": "https://github.com/standard-schema-faker/standard-schema-faker/issues"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish"
+  },
+  "dependencies": {
+    "@standard-schema/spec": "^1.1.0",
+    "@standard-community/standard-json": "^0.3.5"
+  },
+  "peerDependencies": {
+    "@faker-js/faker": "^10.5.0"
+  },
+  "peerDependenciesMeta": {
+    "@faker-js/faker": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.4",
+    "@changesets/cli": "^2.31.1",
+    "@faker-js/faker": "^10.5.0",
+    "@valibot/to-json-schema": "^1.7.1",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "arktype": "^2.2.3",
+    "effect": "^3.22.0",
+    "fast-check": "^4.9.0",
+    "tsdown": "^0.11.0",
+    "typescript": "^5.7.0",
+    "valibot": "^1.4.2",
+    "vitest": "^3.0.0",
+    "zod": "^4.4.3"
+  },
+  "packageManager": "pnpm@11.8.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}
