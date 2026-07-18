@@ -23,8 +23,12 @@ role: enum(admin|user|guest), tags: string(3-12)[](max 5),
 bio: string(max 200) optional, createdAt: datetime
 ```
 
-Run it yourself: `cd bench && npm install && node bench.mjs` (and `node cold-*.mjs` for the
-cold-start numbers).
+Run it yourself: `cd bench && npm run pack-tarballs && npm install && npm run bench` (and
+`npm run bench:cold` for the cold-start numbers). `bench/.npmrc` sets `legacy-peer-deps` —
+zod-mock peer-requires faker ≤9 while our tarball peer-wants faker ^10, an unresolvable
+strict-peer conflict for a harness that deliberately installs both; the runtime-required
+peers skipped by legacy mode (`quansync`, `@standard-schema/spec`) are declared as direct
+dependencies instead.
 
 ## A known third-party bug affecting this bench
 
@@ -45,13 +49,16 @@ fixable from this side without a fix or workaround upstream in
 
 | Generator | ops/sec | vs @anatine/zod-mock |
 |---|---:|---:|
-| `@standard-schema-faker/core` (dumb backend, zero deps) | ~20,400–20,800 | 2.0–2.1x faster |
-| `standard-schema-faker` (fakerBackend, realistic values) | ~7,300–7,400 | **0.71–0.74x (slower)** |
-| `@anatine/zod-mock` | ~9,900–10,400 | 1x (baseline) |
+| `standard-schema-faker` (root entry, dumb backend, zero deps) | ~17,300 | ~1.75x faster |
+| `standard-schema-faker/faker` (fakerBackend + defaultHeuristics) | ~5,700 | **~0.58x (slower)** |
+| `@anatine/zod-mock` | ~9,900 | 1x (baseline) |
 
 We lose to `@anatine/zod-mock` on raw warm throughput when using the realistic
-(`fakerBackend`) backend — by roughly 26–29%. The zero-dependency `defaultBackend` is
-meaningfully *faster* than zod-mock (about 2x), which makes sense: it's a tiny seeded PRNG
+`/faker` entry — by roughly 40%. Note the `/faker` entry now runs `defaultHeuristics` by
+default (property-name matching against ~50 rules per string/number/object node), which is
+additional per-node work zod-mock's fixed key-map lookup doesn't do; disabling heuristics
+(`createFaker({ heuristics: false })`) recovers a chunk of that gap. The zero-dependency
+root entry remains meaningfully *faster* than zod-mock (~1.75x): it's a tiny seeded PRNG
 with hand-rolled string templates, doing far less work per field than a full `@faker-js/faker`
 call.
 
@@ -72,9 +79,9 @@ call.
   throughput with zero runtime dependencies. If this project ever leans into that as a
   differentiator, that story has real numbers behind it.
 - **Cold start** (single first call in a fresh `node` process — module load + first schema
-  conversion + first generation, no warm-up) is roughly comparable across all three: **~2.3ms**
-  (dumb backend), **~3.6–7.4ms** (fakerBackend — variance likely from `Faker` instance
-  construction cost), **~2.9–3.5ms** (zod-mock). Directional only; not the focus of this
+  conversion + first generation, no warm-up) is roughly comparable across all three: **~2.9ms**
+  (dumb backend), **~4.8ms** (fakerBackend — `Faker` instance construction cost), **~2.7ms**
+  (zod-mock). Directional only; not the focus of this
   benchmark, since a mocking library's steady-state throughput matters far more in realistic
   usage (test suites, seed scripts) than its first-call latency.
 - These numbers should NOT be read as "don't use standard-schema-faker" — they're read as "the
