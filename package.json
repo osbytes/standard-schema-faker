@@ -49,11 +49,11 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/standard-schema-faker/standard-schema-faker.git"
+    "url": "git+https://github.com/osbytes/standard-schema-faker.git"
   },
-  "homepage": "https://github.com/standard-schema-faker/standard-schema-faker#readme",
+  "homepage": "https://github.com/osbytes/standard-schema-faker#readme",
   "bugs": {
-    "url": "https://github.com/standard-schema-faker/standard-schema-faker/issues"
+    "url": "https://github.com/osbytes/standard-schema-faker/issues"
   },
   "scripts": {
     "build": "tsdown",
