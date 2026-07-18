@@ -1,6 +1,6 @@
 {
   "name": "standard-schema-faker",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Fake data for any Standard Schema validator — Zod, Valibot, ArkType, Effect Schema, and friends. Seeded, typed, zero config. Root entry is a zero-dependency JSON-Schema-driven walker; `standard-schema-faker/faker` and `standard-schema-faker/chance` add batteries-included realistic values via @faker-js/faker or chance.",
   "keywords": [
     "standard-schema",
