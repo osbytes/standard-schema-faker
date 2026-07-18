@@ -2,6 +2,15 @@
 
 > Fake data for **any** [Standard Schema](https://standardschema.dev) validator — Zod, Valibot, ArkType, and friends. Seeded, typed, zero config.
 
+<a href="https://www.osbytes.io" target="_blank" title="osbytes — open source bytes">
+  <img
+    src="https://www.osbytes.io/badge.svg"
+    alt="osbytes — open source bytes"
+    width="32"
+    height="32"
+  />
+</a>
+
 <!-- badges: npm version, CI, license — add once published -->
 
 One package, two entry points:
