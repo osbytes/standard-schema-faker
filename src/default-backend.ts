@@ -1,3 +1,4 @@
+import { fakeBase64String, fakeDurationString } from "./internal/rand-string-generators.js";
 import { generateFromPattern, parsePattern, UnsupportedPatternError } from "./pattern.js";
 import { mulberry32 } from "./rng.js";
 import type { BackendInstance, GeneratorBackend, StringHint } from "./types.js";
@@ -96,44 +97,6 @@ function fakeTimeString(rand: () => number): string {
   const mm = Math.floor(rand() * 60);
   const ss = Math.floor(rand() * 60);
   return `${pad2(hh)}:${pad2(mm)}:${pad2(ss)}`;
-}
-
-/**
- * JSON Schema `duration` format: ISO 8601 duration, e.g. "P1Y2M3DT4H5M6S". Zod's own
- * `duration` regex forbids an all-zero/empty duration and requires at least one designator
- * to have a nonzero value in the common case; always including a nonzero seconds component
- * keeps this simple and safely non-empty.
- */
-function fakeDurationString(rand: () => number): string {
-  const years = Math.floor(rand() * 5);
-  const months = Math.floor(rand() * 12);
-  const days = Math.floor(rand() * 28);
-  const hours = Math.floor(rand() * 24);
-  const minutes = Math.floor(rand() * 60);
-  const seconds = 1 + Math.floor(rand() * 59); // always >=1 so the duration is never all-zero
-  let out = "P";
-  if (years > 0) out += `${years}Y`;
-  if (months > 0) out += `${months}M`;
-  if (days > 0) out += `${days}D`;
-  out += `T${hours > 0 ? `${hours}H` : ""}${minutes > 0 ? `${minutes}M` : ""}${seconds}S`;
-  return out;
-}
-
-const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-/** JSON Schema `base64` format (via `contentEncoding: "base64"`): valid base64, always padded to a multiple of 4. */
-function fakeBase64String(rand: () => number): string {
-  // Build from whole 3-byte groups (4 base64 chars, no padding needed) so the result is
-  // always exactly a multiple of 4 characters with no padding — trivially valid, no need to
-  // reason about `=` padding rules for a partial final group.
-  const groupCount = 1 + Math.floor(rand() * 4);
-  let out = "";
-  for (let g = 0; g < groupCount; g++) {
-    for (let i = 0; i < 4; i++) {
-      out += BASE64_ALPHABET[Math.floor(rand() * BASE64_ALPHABET.length)];
-    }
-  }
-  return out;
 }
 
 /**

@@ -1,7 +1,7 @@
 {
   "name": "standard-schema-faker",
   "version": "0.1.2",
-  "description": "Fake data for any Standard Schema validator — Zod, Valibot, ArkType, Effect Schema, and friends. Seeded, typed, zero config. Root entry is a zero-dependency JSON-Schema-driven walker; `standard-schema-faker/faker` adds batteries-included realistic values via @faker-js/faker.",
+  "description": "Fake data for any Standard Schema validator — Zod, Valibot, ArkType, Effect Schema, and friends. Seeded, typed, zero config. Root entry is a zero-dependency JSON-Schema-driven walker; `standard-schema-faker/faker` and `standard-schema-faker/chance` add batteries-included realistic values via @faker-js/faker or chance.",
   "keywords": [
     "standard-schema",
     "faker",
@@ -40,11 +40,22 @@
         "types": "./dist/faker/index.d.cts",
         "default": "./dist/faker/index.cjs"
       }
+    },
+    "./chance": {
+      "import": {
+        "types": "./dist/chance/index.d.ts",
+        "default": "./dist/chance/index.js"
+      },
+      "require": {
+        "types": "./dist/chance/index.d.cts",
+        "default": "./dist/chance/index.cjs"
+      }
     }
   },
   "files": [
     "dist",
-    "faker"
+    "faker",
+    "chance"
   ],
   "sideEffects": false,
   "repository": {
@@ -72,10 +83,14 @@
     "@standard-schema/spec": "^1.1.0"
   },
   "peerDependencies": {
-    "@faker-js/faker": "^10.5.0"
+    "@faker-js/faker": "^10.5.0",
+    "chance": "^1.1.12"
   },
   "peerDependenciesMeta": {
     "@faker-js/faker": {
+      "optional": true
+    },
+    "chance": {
       "optional": true
     }
   },
@@ -83,10 +98,12 @@
     "@biomejs/biome": "^2.5.4",
     "@changesets/cli": "^2.31.1",
     "@faker-js/faker": "^10.5.0",
+    "@types/chance": "^1.1.7",
     "@valibot/to-json-schema": "^1.7.1",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "arktype": "^2.2.3",
+    "chance": "^1.1.12",
     "effect": "^3.22.0",
     "fast-check": "^4.9.0",
     "tsdown": "^0.11.0",

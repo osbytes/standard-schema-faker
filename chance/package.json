@@ -1,0 +1,5 @@
+{
+  "main": "../dist/chance/index.cjs",
+  "module": "../dist/chance/index.js",
+  "types": "../dist/chance/index.d.ts"
+}

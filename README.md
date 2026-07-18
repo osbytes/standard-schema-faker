@@ -13,7 +13,7 @@
 
 <!-- badges: npm version, CI, license — add once published -->
 
-One package, two entry points:
+One package, three entry points:
 
 ```ts
 // root entry: zero-dependency, structurally-valid-but-meaningless values, no realism opinions
@@ -21,6 +21,9 @@ import { fake, fakeMany } from 'standard-schema-faker'
 
 // batteries-included: same API, realistic values via @faker-js/faker + defaultHeuristics
 import { fake, fakeMany } from 'standard-schema-faker/faker'
+
+// alternative batteries-included: same API, realistic values via chance + chanceHeuristics
+import { fake, fakeMany } from 'standard-schema-faker/chance'
 ```
 
 ```ts
@@ -50,7 +53,7 @@ Works with any library implementing the Standard Schema + [Standard JSON Schema]
 - **Universal** — one API for Zod v4, Valibot, ArkType, and (best-effort) Effect Schema. Zod has mockers; the rest have none. This covers them all.
 - **Seeded** — every value flows through a seeded RNG. Same seed → identical output, across processes and days (dates are generated relative to a fixed reference point, not `Date.now()`, by default — configurable via `referenceDate`, see "Design notes"). Built for snapshot tests and fixtures.
 - **Input vs output aware** — generate what a client would *send* (`io: 'input'`) or what validation *yields* — defaults and transforms applied (`io: 'output'`).
-- **Tiny root entry, pluggable realism** — the root `standard-schema-faker` entry has no faker dependency and ships a minimal deterministic generator (zero runtime deps beyond the Standard Schema/JSON Schema spec plumbing). The `standard-schema-faker/faker` subpath wires up a `@faker-js/faker`-backed backend (realistic emails, UUIDs, URLs, dates, IPs) plus `defaultHeuristics` as its default — use the root entry directly if you want the zero-dependency generator instead.
+- **Tiny root entry, pluggable realism** — the root `standard-schema-faker` entry has no faker dependency and ships a minimal deterministic generator (zero runtime deps beyond the Standard Schema/JSON Schema spec plumbing). The `standard-schema-faker/faker` subpath wires up a `@faker-js/faker`-backed backend (realistic emails, UUIDs, URLs, dates, IPs) plus `defaultHeuristics` as its default; `standard-schema-faker/chance` is the same idea backed by [`chance`](https://chancejs.com) instead, with its own `chanceHeuristics` default (a similar but not identical ruleset — see "Realistic fields (heuristics)" below for what it covers) — use the root entry directly if you want the zero-dependency generator instead.
 
 ## Install
 
@@ -58,10 +61,16 @@ Works with any library implementing the Standard Schema + [Standard JSON Schema]
 npm install -D standard-schema-faker
 ```
 
-`@faker-js/faker` is an optional **peer dependency** — only needed if you use the batteries-included `standard-schema-faker/faker` subpath. The root `standard-schema-faker` entry never requires it. If you want realistic values:
+`@faker-js/faker` and `chance` are both optional **peer dependencies** — only needed if you use the corresponding batteries-included subpath (`standard-schema-faker/faker` or `standard-schema-faker/chance`). The root `standard-schema-faker` entry never requires either. If you want realistic values via faker:
 
 ```sh
 npm i -D standard-schema-faker @faker-js/faker
+```
+
+...or via chance:
+
+```sh
+npm i -D standard-schema-faker chance
 ```
 
 ## Supported validators
@@ -263,8 +272,8 @@ can `instanceof`-narrow instead of string-matching `error.message`:
 | `UnsupportedPatternError` | a `pattern` regex construct outside the supported subset (falls back to plain-string generation automatically — this is informational, not usually something you catch) | — |
 
 All extend the base `SchemaFakerError` — `catch (e) { if (e instanceof SchemaFakerError) ... }`
-catches any of them at once. Available from both the root `standard-schema-faker` entry and the
-`standard-schema-faker/faker` subpath.
+catches any of them at once. Available from the root `standard-schema-faker` entry and both the
+`standard-schema-faker/faker` and `standard-schema-faker/chance` subpaths.
 
 ### Determinism tiers
 
@@ -272,10 +281,13 @@ The `defaultBackend` (from the root `standard-schema-faker` entry) is stable acr
 package's own releases — only a semver-major bump changes its seeded output sequences. `fakerBackend`'s
 seeded output is only stable within a given `@faker-js/faker` version (faker majors have
 historically changed seeded sequences) — pin `@faker-js/faker` in your own `package.json` if
-snapshot tests depend on exact `fakerBackend` output surviving a `faker` upgrade. This is
-stability ACROSS VERSIONS; stability across processes/days is separate and always holds — see
-"Design notes" below for why dates specifically are anchored to a fixed reference point rather
-than the real clock.
+snapshot tests depend on exact `fakerBackend` output surviving a `faker` upgrade. `chanceBackend`
+(from `standard-schema-faker/chance`) has the identical caveat with respect to `chance` instead —
+its seeded output is only stable within a given `chance` version, so pin `chance` in your own
+`package.json` if snapshot tests depend on exact `chanceBackend` output surviving a `chance`
+upgrade. This is stability ACROSS VERSIONS; stability across processes/days is separate and always
+holds — see "Design notes" below for why dates specifically are anchored to a fixed reference
+point rather than the real clock.
 
 ## Realistic fields (heuristics)
 
@@ -285,6 +297,22 @@ default: a property named `email` gets a real-looking email, `firstName` a real 
 The root `standard-schema-faker` entry ships **zero** rules and defaults to `heuristics: false`
 — it stays fully spec-driven with no guessing; only the `/faker` subpath opts in by default (you
 can still pass `defaultHeuristics` to the root entry's own `createFaker` explicitly).
+
+`standard-schema-faker/chance` is the same idea, backed by [`chance`](https://chancejs.com)
+instead of `@faker-js/faker`, with its own `chanceHeuristics` ruleset turned on by default. It
+mirrors `defaultHeuristics`' structure, rule ordering, and FHIR `ContactPoint` correlation tiers
+exactly (see below) — but `chance` doesn't have a generator for everything faker does, so
+`chanceHeuristics` **omits** those rules entirely rather than faking them badly. Compared to
+`defaultHeuristics` (faker), `chanceHeuristics` does **not** include: `person.jobTitle`'s
+faker-style seniority-worded titles (uses `chance.profession()` instead — included, just a
+different flavor), `commerce.productName`/`commerce.price`/`commerce.sku` (chance has no
+product-catalog namespace at all), `finance.iban`/`finance.bic`/`finance.accountNumber` (no
+dedicated, documented chance generator), `company.department`/`company.industry`, `internet.
+userAgent`, `media.mimeType`/`media.fileName`, and `ids.slug`. Everything else — person names/
+gender/bio, email/phone/ContactPoint correlation, username/password/url/avatar/ip, address
+fields, company name, credit card/currency, uuid/createdAt/updatedAt/deletedAt/birthDate, and
+color — has a `chanceHeuristics` equivalent. See `src/chance/heuristics.ts`'s header comment for
+the exact list, cross-referenced against `defaultHeuristics`' own rule names.
 
 ```ts
 import { createFaker } from 'standard-schema-faker/faker'
@@ -673,7 +701,7 @@ complaint classes in comparable mocking tools:
 Pre-release: feature-complete and publish-ready, but **not yet published**. The repository URL
 in `package.json` is a placeholder (the `standard-schema-faker` GitHub org doesn't exist yet),
 and no version has been published to npm. Ships as a single package, `standard-schema-faker`,
-with subpath exports (`.` and `./faker`) — no `@standard-schema-faker/*` npm scope. A human
+with subpath exports (`.`, `./faker`, and `./chance`) — no `@standard-schema-faker/*` npm scope. A human
 needs to register the npm package name / GitHub org (or point them at real ones) and run the
 actual publish.
 
