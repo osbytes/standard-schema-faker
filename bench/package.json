@@ -5,7 +5,7 @@
   "description": "Standalone benchmark harness (not a workspace member) comparing standard-schema-faker against @anatine/zod-mock. Isolated because @anatine/zod-mock requires zod v3, incompatible with this repo's zod v4.",
   "type": "module",
   "scripts": {
-    "pack-tarballs": "mkdir -p tarballs && (cd .. && pnpm build && pnpm pack --pack-destination ./bench/tarballs)",
+    "pack-tarballs": "mkdir -p tarballs && (cd .. && pnpm build && pnpm pack --pack-destination ./bench/tarballs) && mv tarballs/standard-schema-faker-*.tgz tarballs/standard-schema-faker.tgz",
     "bench": "node bench.mjs",
     "bench:cold": "node cold-dumb.mjs && node cold-faker.mjs && node cold-zodmock.mjs"
   },
@@ -15,6 +15,6 @@
     "zod": "^3.25.76",
     "zod-v4": "npm:zod@^4.4.3",
     "zod-to-json-schema": "^3.25.2",
-    "standard-schema-faker": "file:./tarballs/standard-schema-faker-0.1.0.tgz"
+    "standard-schema-faker": "file:./tarballs/standard-schema-faker.tgz"
   }
 }
