@@ -378,6 +378,32 @@ function codePointOf(char: string): number {
   return point;
 }
 
+/**
+ * JSON Schema `pattern` semantics check via the NATIVE regex engine — unanchored (a pattern
+ * matches if it matches anywhere; schema authors anchor explicitly with ^/$, per
+ * https://json-schema.org/understanding-json-schema/reference/string#regexp), and strictly
+ * more complete than this file's generation grammar (lookarounds, named groups, etc. all
+ * work here even though generateFromPattern can't produce from them). Used by the backends'
+ * format-first guard: a value from a dedicated `format` generator is kept when it already
+ * satisfies the schema's own `pattern`, instead of always generating from the pattern.
+ *
+ * Symptom that motivated this: Zod v4's z.uuid() emits `format: "uuid"` PLUS a pattern whose
+ * alternation explicitly includes the nil and max UUIDs (`(<versioned uuid>|00000000-…|
+ * ffffffff-…)`); uniform branch selection in generateFromPattern therefore returned a
+ * degenerate constant UUID for ~2/3 of seeds. Weighting alternation branches was rejected —
+ * relative branch "sizes" are unknowable in general; preferring the format generator
+ * (validated against the pattern) fixes every such format+pattern case at once. An
+ * uncompilable pattern returns false — the caller then falls back to generateFromPattern,
+ * whose own parser is the authority on what it supports.
+ */
+export function matchesPattern(pattern: string, value: string): boolean {
+  try {
+    return new RegExp(pattern).test(value);
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Generation
 // ---------------------------------------------------------------------------

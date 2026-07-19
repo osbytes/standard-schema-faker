@@ -1,6 +1,6 @@
 import { base, en, Faker } from "@faker-js/faker";
 import type { BackendInstance, GeneratorBackend, StringHint } from "../index.js";
-import { generateFromPattern, parsePattern, UnsupportedPatternError } from "../index.js";
+import { generateFromPattern, matchesPattern, parsePattern, UnsupportedPatternError } from "../index.js";
 
 /**
  * standard-schema-faker/faker
@@ -215,11 +215,16 @@ export const fakerBackend: GeneratorBackend = {
       },
 
       string(hint: StringHint): string {
-        // `pattern` takes priority over `format`, mirroring core's default backend (see
-        // default-backend.ts) — reuses core's bounded randexp-style generator rather than
-        // duplicating the regex engine here. `rand()` is bridged from faker's own seeded PRNG
-        // via `faker.number.float`, capped strictly below 1 to avoid an off-by-one out-of-
-        // bounds pick in the pattern generator's array-indexing (`Math.floor(rand() * n)`).
+        // Format-first when both `format` and `pattern` are present, mirroring core's default
+        // backend (see default-backend.ts for the full rationale — short version: Zod's
+        // z.uuid() pattern alternation includes the nil/max UUID literals, so generating from
+        // the pattern returned a degenerate constant for ~2/3 of seeds, and faker's dedicated
+        // generators are the whole point of this adapter). The format value is kept only if it
+        // satisfies the schema's own pattern (native-regex check) and length bounds; otherwise
+        // core's bounded randexp-style generator takes over. `rand()` is bridged from faker's
+        // own seeded PRNG via `faker.number.float`, capped strictly below 1 to avoid an
+        // off-by-one out-of-bounds pick in the pattern generator's array-indexing
+        // (`Math.floor(rand() * n)`).
         // JSON Schema applies `pattern` AND `minLength`/`maxLength` simultaneously -- both must
         // hold on the SAME string. Bounded re-roll (regenerate from the pattern with fresh
         // randomness) up to `PATTERN_LENGTH_RETRY_BUDGET` times until both are satisfied; if the
@@ -228,6 +233,10 @@ export const fakerBackend: GeneratorBackend = {
         // bounds" but no longer matches its own pattern. `strict: true` is the documented
         // backstop for an unsatisfiable or too-narrow pattern/length combination.
         if (hint.pattern) {
+          const formatted = dedicatedFormatValue();
+          if (formatted !== null && matchesPattern(hint.pattern, formatted) && withinLengthBounds(formatted, hint)) {
+            return formatted;
+          }
           try {
             const parsed = parsePattern(hint.pattern);
             const rand = () => faker.number.float({ min: 0, max: 0.999999999, fractionDigits: 9 });
@@ -242,40 +251,47 @@ export const fakerBackend: GeneratorBackend = {
           }
         }
 
-        switch (hint.format) {
-          case "email":
-            return faker.internet.email();
-          case "uuid":
-            return faker.string.uuid();
-          case "uri":
-          case "url":
-          // `iri`/`iri-reference`/`uri-reference` — see default-backend.ts's comment on the
-          // same cases: no faker helper distinguishes these from a plain URL, and a plain
-          // ASCII URL is a valid value for all of them.
-          case "iri":
-          case "iri-reference":
-          case "uri-reference":
-            return faker.internet.url();
-          case "date-time":
-            return fakeAnytime(faker).toISOString();
-          case "date":
-            return fakeAnytime(faker).toISOString().slice(0, 10);
-          case "time":
-            return fakeAnytime(faker).toISOString().slice(11, 19);
-          case "duration":
-            return fakeDuration(faker);
-          case "base64":
-            return fakeBase64(faker);
-          case "jwt":
-            return faker.internet.jwt();
-          case "ipv4":
-            return faker.internet.ipv4();
-          case "ipv6":
-            return faker.internet.ipv6();
-          case "hostname":
-            return faker.internet.domainName();
-          default:
-            return fakeLoremString(faker, hint);
+        return dedicatedFormatValue() ?? fakeLoremString(faker, hint);
+
+        // Hoisted function declaration so the `pattern` branch above can call it. `default:
+        // null` = no dedicated generator for this format; the lorem fallback stays with the
+        // caller so the pattern branch never mistakes it for a format-backed value.
+        function dedicatedFormatValue(): string | null {
+          switch (hint.format) {
+            case "email":
+              return faker.internet.email();
+            case "uuid":
+              return faker.string.uuid();
+            case "uri":
+            case "url":
+            // `iri`/`iri-reference`/`uri-reference` — see default-backend.ts's comment on the
+            // same cases: no faker helper distinguishes these from a plain URL, and a plain
+            // ASCII URL is a valid value for all of them.
+            case "iri":
+            case "iri-reference":
+            case "uri-reference":
+              return faker.internet.url();
+            case "date-time":
+              return fakeAnytime(faker).toISOString();
+            case "date":
+              return fakeAnytime(faker).toISOString().slice(0, 10);
+            case "time":
+              return fakeAnytime(faker).toISOString().slice(11, 19);
+            case "duration":
+              return fakeDuration(faker);
+            case "base64":
+              return fakeBase64(faker);
+            case "jwt":
+              return faker.internet.jwt();
+            case "ipv4":
+              return faker.internet.ipv4();
+            case "ipv6":
+              return faker.internet.ipv6();
+            case "hostname":
+              return faker.internet.domainName();
+            default:
+              return null;
+          }
         }
       },
 

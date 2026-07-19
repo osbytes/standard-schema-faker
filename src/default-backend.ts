@@ -1,5 +1,5 @@
 import { fakeBase64String, fakeDurationString } from "./internal/rand-string-generators.js";
-import { generateFromPattern, parsePattern, UnsupportedPatternError } from "./pattern.js";
+import { generateFromPattern, matchesPattern, parsePattern, UnsupportedPatternError } from "./pattern.js";
 import { mulberry32 } from "./rng.js";
 import type { BackendInstance, GeneratorBackend, StringHint } from "./types.js";
 
@@ -200,12 +200,18 @@ export const defaultBackend: GeneratorBackend = {
         const min = hint.minLength ?? (hint.maxLength !== undefined ? Math.min(8, hint.maxLength) : 8);
         const max = Math.max(min, hint.maxLength ?? Math.max(min, 16));
 
-        // `pattern` takes priority over `format` when both are present (e.g. Zod's
-        // z.email() emits both `format: "email"` and a strict validating `pattern`) — pattern
-        // is the more specific, harder-to-satisfy constraint. Bounded randexp-style generation
-        // (see pattern.ts); on parse failure or an unsupported construct, fall through to the
-        // format/plain-string behavior below and rely on `strict` mode's validate+retry as the
-        // documented backstop.
+        // When BOTH `format` (with a dedicated generator) and `pattern` are present (e.g.
+        // Zod's z.uuid() emits `format: "uuid"` plus a strict validating `pattern`), try the
+        // format generator FIRST and keep its value if it satisfies the pattern (native-regex
+        // check, see matchesPattern in pattern.ts) and the length bounds. Rationale: the
+        // dedicated generators produce far better values than randexp-style generation, and
+        // generating from the pattern can be pathological — Zod's uuid pattern alternation
+        // explicitly includes the nil (00000000-…) and max (ffffffff-…) UUID literals, so
+        // uniform branch selection returned a degenerate constant for ~2/3 of seeds. Only
+        // when the format value fails its own schema's pattern (or there is no dedicated
+        // generator) does pattern generation take over; on parse failure or an unsupported
+        // construct there, fall through to the format/plain-string behavior below and rely on
+        // `strict` mode's validate+retry as the documented backstop.
         //
         // JSON Schema applies `pattern` AND `minLength`/`maxLength` as independent, simultaneous
         // constraints on the SAME string — both must hold (the single most-reported bug class
@@ -219,6 +225,10 @@ export const defaultBackend: GeneratorBackend = {
         // `strict: true` remains the documented backstop for a pattern/length combination that's
         // unsatisfiable or too narrow to hit by chance within the retry budget.
         if (hint.pattern) {
+          const formatted = dedicatedFormatValue();
+          if (formatted !== null && matchesPattern(hint.pattern, formatted) && withinLengthBounds(formatted, hint)) {
+            return formatted;
+          }
           try {
             const parsed = parsePattern(hint.pattern);
             let candidate = generateFromPattern(parsed, rand);
@@ -232,46 +242,53 @@ export const defaultBackend: GeneratorBackend = {
           }
         }
 
-        switch (hint.format) {
-          case "email":
-            // Never clamp/truncate a formatted value to satisfy an unrelated length bound —
-            // chopping a generated email at an arbitrary character (e.g. mid-TLD) produces a
-            // string that's simultaneously "in bounds" and not a valid email. Formats win over
-            // length bounds; see generateString's comment in walker.ts. `fakerBackend` follows
-            // the same rule.
-            return fakeEmail(rand);
-          case "uuid":
-            return fakeUuid(rand);
-          case "uri":
-          case "url":
-          // `iri`/`iri-reference` are the internationalized-domain-name variant of
-          // uri/uri-reference (RFC 3987) — no zod helper emits them, but they're a real
-          // JSON Schema format value; a plain ASCII URI is a valid IRI, so reuse the same
-          // generator rather than adding a distinct (untestable-against-any-vendor) one.
-          case "iri":
-          case "iri-reference":
-          case "uri-reference":
-            return fakeUri(rand);
-          case "date-time":
-            return fakeDateString(rand, true, windowStart, windowEnd);
-          case "date":
-            return fakeDateString(rand, false, windowStart, windowEnd);
-          case "time":
-            return fakeTimeString(rand);
-          case "duration":
-            return fakeDurationString(rand);
-          case "base64":
-            return fakeBase64String(rand);
-          case "jwt":
-            return fakeJwtString(rand);
-          case "ipv4":
-            return fakeIpv4(rand);
-          case "ipv6":
-            return fakeIpv6(rand);
-          case "hostname":
-            return fakeHostname(rand);
-          default:
-            return randomWord(rand, min, max);
+        return dedicatedFormatValue() ?? randomWord(rand, min, max);
+
+        // Hoisted function declaration so the `pattern` branch above can call it. `default:
+        // null` = no dedicated generator for this format; the plain-word fallback stays with
+        // the caller so the pattern branch never mistakes it for a format-backed value.
+        function dedicatedFormatValue(): string | null {
+          switch (hint.format) {
+            case "email":
+              // Never clamp/truncate a formatted value to satisfy an unrelated length bound —
+              // chopping a generated email at an arbitrary character (e.g. mid-TLD) produces a
+              // string that's simultaneously "in bounds" and not a valid email. Formats win over
+              // length bounds; see generateString's comment in walker.ts. `fakerBackend` follows
+              // the same rule.
+              return fakeEmail(rand);
+            case "uuid":
+              return fakeUuid(rand);
+            case "uri":
+            case "url":
+            // `iri`/`iri-reference` are the internationalized-domain-name variant of
+            // uri/uri-reference (RFC 3987) — no zod helper emits them, but they're a real
+            // JSON Schema format value; a plain ASCII URI is a valid IRI, so reuse the same
+            // generator rather than adding a distinct (untestable-against-any-vendor) one.
+            case "iri":
+            case "iri-reference":
+            case "uri-reference":
+              return fakeUri(rand);
+            case "date-time":
+              return fakeDateString(rand, true, windowStart, windowEnd);
+            case "date":
+              return fakeDateString(rand, false, windowStart, windowEnd);
+            case "time":
+              return fakeTimeString(rand);
+            case "duration":
+              return fakeDurationString(rand);
+            case "base64":
+              return fakeBase64String(rand);
+            case "jwt":
+              return fakeJwtString(rand);
+            case "ipv4":
+              return fakeIpv4(rand);
+            case "ipv6":
+              return fakeIpv6(rand);
+            case "hostname":
+              return fakeHostname(rand);
+            default:
+              return null;
+          }
         }
       },
 

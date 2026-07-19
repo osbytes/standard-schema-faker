@@ -1,6 +1,6 @@
 import Chance from "chance";
 import type { BackendInstance, GeneratorBackend, StringHint } from "../index.js";
-import { generateFromPattern, parsePattern, UnsupportedPatternError } from "../index.js";
+import { generateFromPattern, matchesPattern, parsePattern, UnsupportedPatternError } from "../index.js";
 import { fakeBase64String, fakeDurationString } from "../internal/rand-string-generators.js";
 
 /**
@@ -195,15 +195,22 @@ export const chanceBackend: GeneratorBackend = {
       },
 
       string(hint: StringHint): string {
-        // `pattern` takes priority over `format`, mirroring core's default backend and the
-        // faker adapter (see default-backend.ts / faker/index.ts) — reuses core's bounded
-        // randexp-style generator rather than duplicating the regex engine here. Bounded
+        // Format-first when both `format` and `pattern` are present, mirroring core's default
+        // backend and the faker adapter (see default-backend.ts for the full rationale — Zod's
+        // z.uuid() pattern alternation includes the nil/max UUID literals, so pattern
+        // generation returned a degenerate constant for ~2/3 of seeds). The format value is
+        // kept only if it satisfies the schema's own pattern (native-regex check) and length
+        // bounds; otherwise core's bounded randexp-style generator takes over. Bounded
         // re-roll (regenerate from the pattern with fresh randomness) up to
         // `PATTERN_LENGTH_RETRY_BUDGET` times until both the pattern AND minLength/maxLength are
         // satisfied; if the budget is exhausted, return the LAST attempt UNCHANGED — never
         // truncate/pad a pattern-generated value into range. `strict: true` is the documented
         // backstop for an unsatisfiable or too-narrow combination.
         if (hint.pattern) {
+          const formatted = dedicatedFormatValue();
+          if (formatted !== null && matchesPattern(hint.pattern, formatted) && withinLengthBounds(formatted, hint)) {
+            return formatted;
+          }
           try {
             const parsed = parsePattern(hint.pattern);
             let candidate = generateFromPattern(parsed, rand);
@@ -217,40 +224,47 @@ export const chanceBackend: GeneratorBackend = {
           }
         }
 
-        switch (hint.format) {
-          case "email":
-            return chance.email();
-          case "uuid":
-            return chance.guid({ version: 4 });
-          case "uri":
-          case "url":
-          // `iri`/`iri-reference`/`uri-reference` — see default-backend.ts's comment on the
-          // same cases: no chance helper distinguishes these from a plain URL, and a plain
-          // ASCII URL is a valid value for all of them.
-          case "iri":
-          case "iri-reference":
-          case "uri-reference":
-            return chance.url();
-          case "date-time":
-            return fakeDateString(chance, true, windowStart, windowEnd);
-          case "date":
-            return fakeDateString(chance, false, windowStart, windowEnd);
-          case "time":
-            return fakeTimeString(chance);
-          case "duration":
-            return fakeDurationString(rand);
-          case "base64":
-            return fakeBase64String(rand);
-          case "jwt":
-            return fakeJwtString(rand);
-          case "ipv4":
-            return chance.ip();
-          case "ipv6":
-            return chance.ipv6();
-          case "hostname":
-            return chance.domain();
-          default:
-            return fakeWordString(chance, hint);
+        return dedicatedFormatValue() ?? fakeWordString(chance, hint);
+
+        // Hoisted function declaration so the `pattern` branch above can call it. `default:
+        // null` = no dedicated generator for this format; the word fallback stays with the
+        // caller so the pattern branch never mistakes it for a format-backed value.
+        function dedicatedFormatValue(): string | null {
+          switch (hint.format) {
+            case "email":
+              return chance.email();
+            case "uuid":
+              return chance.guid({ version: 4 });
+            case "uri":
+            case "url":
+            // `iri`/`iri-reference`/`uri-reference` — see default-backend.ts's comment on the
+            // same cases: no chance helper distinguishes these from a plain URL, and a plain
+            // ASCII URL is a valid value for all of them.
+            case "iri":
+            case "iri-reference":
+            case "uri-reference":
+              return chance.url();
+            case "date-time":
+              return fakeDateString(chance, true, windowStart, windowEnd);
+            case "date":
+              return fakeDateString(chance, false, windowStart, windowEnd);
+            case "time":
+              return fakeTimeString(chance);
+            case "duration":
+              return fakeDurationString(rand);
+            case "base64":
+              return fakeBase64String(rand);
+            case "jwt":
+              return fakeJwtString(rand);
+            case "ipv4":
+              return chance.ip();
+            case "ipv6":
+              return chance.ipv6();
+            case "hostname":
+              return chance.domain();
+            default:
+              return null;
+          }
         }
       },
 

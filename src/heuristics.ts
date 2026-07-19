@@ -1,4 +1,5 @@
 import { isLiteralPattern, matchGlob, splitPath, WILDCARD_ANY, WILDCARD_ONE } from "./glob.js";
+import { matchesPattern } from "./pattern.js";
 import type { BackendInstance, HeuristicFn, HeuristicMatcher, HeuristicRule, JSONSchema, MatchContext } from "./types.js";
 
 /**
@@ -198,6 +199,11 @@ function withinBounds(value: unknown, node: JSONSchema): boolean {
   if (typeof value === "string") {
     if (typeof node.minLength === "number" && value.length < node.minLength) return false;
     if (typeof node.maxLength === "number" && value.length > node.maxLength) return false;
+    // `pattern` is a constraint like any other: a heuristic value that violates the node's own
+    // regex must be discarded (decline -> pattern-tier generation takes over), never returned.
+    // Caught by the commerce.sku rule emitting "ZVH-10669" for a `/^SKU-\d{4}$/` schema once
+    // nested heuristics started firing at all.
+    if (typeof node.pattern === "string" && !matchesPattern(node.pattern, value)) return false;
     return true;
   }
   if (typeof value === "number") {

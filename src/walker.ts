@@ -80,6 +80,8 @@ const DEFAULT_ARRAY_MIN = 1;
 const DEFAULT_ARRAY_MAX = 3;
 const DEFAULT_NUMBER_MIN = 0;
 const DEFAULT_NUMBER_MAX = 100;
+/** Window width used when only one numeric bound is real — see effectiveBounds. */
+const DEFAULT_NUMBER_WINDOW = 100;
 const DEFAULT_STRING_MIN = 8;
 const DEFAULT_STRING_MAX = 16;
 
@@ -460,12 +462,44 @@ function shallowMergeAllOf(subSchemas: JSONSchema[], rest: JSONSchema): JSONSche
 // Primitive generators
 // ---------------------------------------------------------------------------
 
-function generateInteger(node: JSONSchema, ctx: WalkContext): number {
-  let min = typeof node.minimum === "number" ? node.minimum : DEFAULT_NUMBER_MIN;
-  let max = typeof node.maximum === "number" ? node.maximum : DEFAULT_NUMBER_MAX;
+/**
+ * Resolve raw schema bounds into a realistic generation window. A bound is
+ * treated as ABSENT when missing or when its magnitude reaches
+ * Number.MAX_SAFE_INTEGER: Zod v4 stamps every `z.int()` with
+ * minimum/maximum ±(2^53 - 1) as an "any safe integer" sentinel, so honoring
+ * those literally produced absurd 16-digit values (`z.int().positive()` →
+ * 6488106240503889), and a half-bounded `z.int().min(200)` would clamp onto
+ * the 0-100 default window and collapse to the constant 200. Half-bounded
+ * schemas get a DEFAULT_NUMBER_WINDOW-wide window anchored at the real bound.
+ * A user's explicit-but-huge bound loses realism under this rule, which is the
+ * acceptable trade: generated values stay valid either way.
+ */
+function effectiveBounds(rawMin: number | undefined, rawMax: number | undefined): { min: number; max: number } {
+  const isReal = (b: number | undefined): b is number => typeof b === "number" && Math.abs(b) < Number.MAX_SAFE_INTEGER;
+  if (isReal(rawMin) && isReal(rawMax)) return { min: rawMin, max: rawMax };
+  if (isReal(rawMin)) return { min: rawMin, max: rawMin + DEFAULT_NUMBER_WINDOW };
+  if (isReal(rawMax)) return { min: rawMax - DEFAULT_NUMBER_WINDOW, max: rawMax };
+  return { min: DEFAULT_NUMBER_MIN, max: DEFAULT_NUMBER_MAX };
+}
 
-  if (typeof node.exclusiveMinimum === "number") min = node.exclusiveMinimum + 1;
-  if (typeof node.exclusiveMaximum === "number") max = node.exclusiveMaximum - 1;
+/** Tightest lower bound from minimum/exclusiveMinimum (either or both may be present — Zod emits exclusiveMinimum alongside its sentinel maximum). */
+function tightestMin(node: JSONSchema, exclusiveAdjust: number): number | undefined {
+  const candidates: number[] = [];
+  if (typeof node.minimum === "number") candidates.push(node.minimum);
+  if (typeof node.exclusiveMinimum === "number") candidates.push(node.exclusiveMinimum + exclusiveAdjust);
+  return candidates.length ? Math.max(...candidates) : undefined;
+}
+
+/** Tightest upper bound from maximum/exclusiveMaximum. */
+function tightestMax(node: JSONSchema, exclusiveAdjust: number): number | undefined {
+  const candidates: number[] = [];
+  if (typeof node.maximum === "number") candidates.push(node.maximum);
+  if (typeof node.exclusiveMaximum === "number") candidates.push(node.exclusiveMaximum - exclusiveAdjust);
+  return candidates.length ? Math.min(...candidates) : undefined;
+}
+
+function generateInteger(node: JSONSchema, ctx: WalkContext): number {
+  let { min, max } = effectiveBounds(tightestMin(node, 1), tightestMax(node, 1));
 
   if (max < min) max = min;
 
@@ -483,11 +517,9 @@ function generateInteger(node: JSONSchema, ctx: WalkContext): number {
 }
 
 function generateNumber(node: JSONSchema, ctx: WalkContext): number {
-  let min = typeof node.minimum === "number" ? node.minimum : DEFAULT_NUMBER_MIN;
-  let max = typeof node.maximum === "number" ? node.maximum : DEFAULT_NUMBER_MAX;
-
-  if (typeof node.exclusiveMinimum === "number") min = node.exclusiveMinimum;
-  if (typeof node.exclusiveMaximum === "number") max = node.exclusiveMaximum;
+  // exclusiveAdjust 0: floats keep the exclusive bound as the window edge and
+  // rely on the post-draw nudge below to move off it.
+  let { min, max } = effectiveBounds(tightestMin(node, 0), tightestMax(node, 0));
 
   if (max < min) max = min;
 

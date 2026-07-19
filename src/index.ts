@@ -26,7 +26,7 @@ export type { CompiledFinalizers } from "./finalize.js";
 export { compileFinalizers } from "./finalize.js";
 export type { CompiledHeuristics } from "./heuristics.js";
 export { ancestorKeys, compileHeuristics, normalizeKey } from "./heuristics.js";
-export { generateFromPattern, parsePattern, UnsupportedPatternError } from "./pattern.js";
+export { generateFromPattern, matchesPattern, parsePattern, UnsupportedPatternError } from "./pattern.js";
 export { deriveSeed, mulberry32, normalizeSeed, randomSeed } from "./rng.js";
 export type {
   AnySchema,

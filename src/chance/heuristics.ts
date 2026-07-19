@@ -75,19 +75,19 @@ export const chanceHeuristics: HeuristicRule[] = [
   // --- person ---
   {
     name: "person.firstName",
-    match: /^(first|given)name$/,
+    match: /(^|\.)(first|given)name$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).first(),
   },
   {
     name: "person.lastName",
-    match: /^(last|family|sur)name$/,
+    match: /(^|\.)(last|family|sur)name$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).last(),
   },
   {
     name: "person.fullName",
-    match: /^(full|display)name$/,
+    match: /(^|\.)(full|display)name$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).name(),
   },
@@ -95,13 +95,13 @@ export const chanceHeuristics: HeuristicRule[] = [
     // Deliberately a default, same as the faker adapter's "person.name" — removable by design,
     // see chance/index.ts's coverage note and the faker adapter's own rule for the rationale.
     name: "person.name",
-    match: /^name$/,
+    match: /(^|\.)name$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).name(),
   },
   {
     name: "person.gender",
-    match: /^(gender|sex)$/,
+    match: /(^|\.)(gender|sex)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).gender(),
   },
@@ -109,7 +109,7 @@ export const chanceHeuristics: HeuristicRule[] = [
     // Same deliberate narrowness as the faker adapter — never matches bare `title` (semantically
     // empty without context; see this file's header comment and the faker adapter's own rule).
     name: "person.jobTitle",
-    match: /^(jobtitle|jobposition)$/,
+    match: /(^|\.)(jobtitle|jobposition)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).profession(),
   },
@@ -117,7 +117,7 @@ export const chanceHeuristics: HeuristicRule[] = [
     name: "person.bio",
     // chance has no dedicated `bio()` helper (faker does) — a short sentence is the closest
     // realistic analog, same "neutral prose" approach as `text.description` below.
-    match: /^(bio|biography|about|aboutme)$/,
+    match: /(^|\.)(bio|biography|about|aboutme)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).sentence({ words: 14 }),
   },
@@ -220,13 +220,13 @@ export const chanceHeuristics: HeuristicRule[] = [
   },
   {
     name: "contact.email",
-    match: /^(email|emailaddress)$/,
+    match: /(^|\.)(email|emailaddress)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).email(),
   },
   {
     name: "contact.phone",
-    match: /^(phone|phonenumber|mobile|telephone|tel)$/,
+    match: /(^|\.)(phone|phonenumber|mobile|telephone|tel)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).phone(),
   },
@@ -236,7 +236,7 @@ export const chanceHeuristics: HeuristicRule[] = [
     name: "internet.username",
     // chance has no dedicated `username()` helper -- `twitter()` (an "@handle"-shaped string,
     // stripped of its leading "@") is the closest realistic analog.
-    match: /^(username|userid|login|handle)$/,
+    match: /(^|\.)(username|userid|login|handle)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).twitter().replace(/^@/, ""),
   },
@@ -244,13 +244,13 @@ export const chanceHeuristics: HeuristicRule[] = [
     name: "internet.password",
     // chance has no dedicated `password()` helper -- a fixed-length hex hash is a reasonable
     // password-shaped stand-in (opaque, fixed-length, non-guessable-looking).
-    match: /^password$/,
+    match: /(^|\.)password$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).hash({ length: 16 }),
   },
   {
     name: "internet.url",
-    match: /^(url|website|homepage|link)$/,
+    match: /(^|\.)(url|website|homepage|link)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).url(),
   },
@@ -259,19 +259,19 @@ export const chanceHeuristics: HeuristicRule[] = [
     // `protocol: 'https'` forces a full absolute URL -- chance's bare `avatar()` default is
     // protocol-RELATIVE ("//www.gravatar.com/..."), which is not a valid standalone URL (fails
     // `new URL(...)`/a `format: uri` check) without an inherited base.
-    match: /^(avatar|avatarurl|image|imageurl|photo|photourl|picture|pictureurl)$/,
+    match: /(^|\.)(avatar|avatarurl|image|imageurl|photo|photourl|picture|pictureurl)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).avatar({ protocol: "https" }),
   },
   {
     name: "internet.ip",
-    match: /^(ip|ipaddress)$/,
+    match: /(^|\.)(ip|ipaddress)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).ip(),
   },
   {
     name: "internet.hostname",
-    match: /^domain$/,
+    match: /(^|\.)domain$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).domain(),
   },
@@ -279,49 +279,54 @@ export const chanceHeuristics: HeuristicRule[] = [
   // --- address ---
   {
     name: "address.street",
-    match: /^(street|streetaddress|address1|addressline1)$/,
+    match: /(^|\.)(street|streetaddress|address1|addressline1)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).address(),
   },
   {
     name: "address.city",
-    match: /^(city|town)$/,
+    match: /(^|\.)(city|town)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).city(),
   },
   {
     name: "address.state",
-    match: /^(state|province|region)$/,
+    match: /(^|\.)(state|province|region)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).state(),
   },
   {
     name: "address.zip",
-    match: /^(zip|zipcode|postalcode|postcode)$/,
+    match: /(^|\.)(zip|zipcode|postalcode|postcode)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).zip(),
   },
   {
     name: "address.country",
-    match: /^country$/,
+    match: /(^|\.)country$/,
     when: { type: "string" },
-    generate: ({ backend }) => chanceOf(backend).country({ full: true }),
+    // A 2-char-constrained `country` is an ISO alpha-2 code, not a display name (mirrors
+    // the faker ruleset) — chance's bare .country() is already the 2-letter code.
+    generate: (ctx) =>
+      ctx.node.maxLength === 2 || ctx.node.minLength === 2
+        ? chanceOf(ctx.backend).country()
+        : chanceOf(ctx.backend).country({ full: true }),
   },
   {
     name: "address.countryCode",
-    match: /^countrycode$/,
+    match: /(^|\.)countrycode$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).country(),
   },
   {
     name: "address.latitude",
-    match: /^(lat|latitude)$/,
+    match: /(^|\.)(lat|latitude)$/,
     when: { type: "number" },
     generate: ({ backend }) => chanceOf(backend).latitude(),
   },
   {
     name: "address.longitude",
-    match: /^(lng|lon|long|longitude)$/,
+    match: /(^|\.)(lng|lon|long|longitude)$/,
     when: { type: "number" },
     generate: ({ backend }) => chanceOf(backend).longitude(),
   },
@@ -329,7 +334,7 @@ export const chanceHeuristics: HeuristicRule[] = [
   // --- company ---
   {
     name: "company.name",
-    match: /^(companyname|company|organization|org|employer)$/,
+    match: /(^|\.)(companyname|company|organization|org|employer)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).company(),
   },
@@ -339,7 +344,7 @@ export const chanceHeuristics: HeuristicRule[] = [
     // Neutral prose, same rationale as the faker adapter's "text.description" (renamed away
     // from a commerce-flavored generator) -- see that file's header comment.
     name: "text.description",
-    match: /^description$/,
+    match: /(^|\.)description$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).paragraph({ sentences: 2 }),
   },
@@ -347,13 +352,13 @@ export const chanceHeuristics: HeuristicRule[] = [
   // --- finance ---
   {
     name: "finance.creditCard",
-    match: /^(creditcard|creditcardnumber|cardnumber)$/,
+    match: /(^|\.)(creditcard|creditcardnumber|cardnumber)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).cc(),
   },
   {
     name: "finance.currency",
-    match: /^currency$/,
+    match: /(^|\.)currency$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).currency().code,
   },
@@ -361,13 +366,13 @@ export const chanceHeuristics: HeuristicRule[] = [
   // --- ids/dates ---
   {
     name: "ids.uuid",
-    match: /^(id|uuid|guid)$/,
+    match: /(^|\.)(id|uuid|guid)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).guid({ version: 4 }),
   },
   {
     name: "dates.createdAt",
-    match: /^createdat$/,
+    match: /(^|\.)createdat$/,
     when: { type: "string" },
     // No `refDate`/`setDefaultRefDate`-style argument needed here -- unlike the faker adapter,
     // this reaches straight for `BackendInstance.date()` (bounds already anchored to this call's
@@ -377,19 +382,19 @@ export const chanceHeuristics: HeuristicRule[] = [
   },
   {
     name: "dates.updatedAt",
-    match: /^updatedat$/,
+    match: /(^|\.)updatedat$/,
     when: { type: "string" },
     generate: ({ backend }) => backend.date().toISOString(),
   },
   {
     name: "dates.deletedAt",
-    match: /^deletedat$/,
+    match: /(^|\.)deletedat$/,
     when: { type: "string" },
     generate: ({ backend }) => backend.date().toISOString(),
   },
   {
     name: "dates.birthDate",
-    match: /^(birthdate|dob|dateofbirth)$/,
+    match: /(^|\.)(birthdate|dob|dateofbirth)$/,
     when: { type: "string" },
     // chance's own `birthday()` derives its window from `Date.now()` internally (verified
     // against chance's source -- no reference-date override knob exists, unlike faker's
@@ -413,7 +418,7 @@ export const chanceHeuristics: HeuristicRule[] = [
   // --- media ---
   {
     name: "media.color",
-    match: /^(color|colour|hexcolor)$/,
+    match: /(^|\.)(color|colour|hexcolor)$/,
     when: { type: "string" },
     generate: ({ backend }) => chanceOf(backend).color({ format: "hex" }),
   },

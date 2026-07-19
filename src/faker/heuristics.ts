@@ -17,13 +17,18 @@ import type { FakerBackendInstance } from "./index.js";
  *
  * Rules are ordered specific-before-generic within each category (and the whole array is
  * ordered so unambiguous, high-confidence matches like `email`/`uuid` come before broader
- * catch-alls like the plain `name` rule). `match` regexes are matched against the
- * *normalized* key (see core's `normalizeKey` — `first_name`/`firstName`/`FIRST-NAME` all
- * become `"firstname"`) and are deliberately ANCHORED (`^...$`), never bare substrings —
- * normalization strips all separators, so an unanchored `/name/` would spuriously match
- * `"username"`. This is a rule-authoring discipline the engine can't fully enforce; every
- * rule below is written to respect it, and it's exactly what the negative test cases in
- * heuristics.test.ts check for.
+ * catch-alls like the plain `name` rule). Per `HeuristicMatcher`'s contract, `match` regexes
+ * are tested against `ctx.semanticPath` — the full dotted path of *normalized* keys (see
+ * core's `normalizeKey` — `first_name`/`firstName`/`FIRST-NAME` all become `"firstname"`) —
+ * so every rule here is SUFFIX-ANCHORED as `/(^|\.)key$/`: the `(^|\.)` boundary makes the
+ * rule fire at any nesting depth (`shipping.city` and top-level `city` both match) while the
+ * trailing `$` plus the boundary keep it a whole-segment match, never a bare substring —
+ * normalization strips all separators, so a loose `/name/` would spuriously match
+ * `"username"`. (Rules were originally written `/^key$/`, which silently matched ONLY
+ * top-level fields — nested objects got lorem noise across the board.) This is a
+ * rule-authoring discipline the engine can't fully enforce; every rule below is written to
+ * respect it, and it's exactly what the negative test cases in heuristics.test.ts and
+ * nested-heuristics.test.ts check for.
  *
  * SEMANTICALLY-EMPTY BARE KEYS — deliberately UNMATCHED, by design, not oversight: some bare
  * property names have no reliable single meaning without surrounding context, so no rule here
@@ -98,19 +103,19 @@ export const defaultHeuristics: HeuristicRule[] = [
   // --- person ---
   {
     name: "person.firstName",
-    match: /^(first|given)name$/,
+    match: /(^|\.)(first|given)name$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).person.firstName(),
   },
   {
     name: "person.lastName",
-    match: /^(last|family|sur)name$/,
+    match: /(^|\.)(last|family|sur)name$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).person.lastName(),
   },
   {
     name: "person.fullName",
-    match: /^(full|display)name$/,
+    match: /(^|\.)(full|display)name$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).person.fullName(),
   },
@@ -121,13 +126,13 @@ export const defaultHeuristics: HeuristicRule[] = [
     // product name — see `commerce.productName` below, which only fires on `productname`/
     // `itemname`, not bare `name`, so the two never collide).
     name: "person.name",
-    match: /^name$/,
+    match: /(^|\.)name$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).person.fullName(),
   },
   {
     name: "person.gender",
-    match: /^(gender|sex)$/,
+    match: /(^|\.)(gender|sex)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).person.sex(),
   },
@@ -140,13 +145,13 @@ export const defaultHeuristics: HeuristicRule[] = [
     // or a UI label. No rule matches it at all; only the unambiguous `jobTitle`/`jobPosition`
     // variants do.
     name: "person.jobTitle",
-    match: /^(jobtitle|jobposition)$/,
+    match: /(^|\.)(jobtitle|jobposition)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).person.jobTitle(),
   },
   {
     name: "person.bio",
-    match: /^(bio|biography|about|aboutme)$/,
+    match: /(^|\.)(bio|biography|about|aboutme)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).person.bio(),
   },
@@ -326,13 +331,13 @@ export const defaultHeuristics: HeuristicRule[] = [
     // `format: 'email'` is already handled natively by the format tier (higher fidelity,
     // guaranteed-valid) -- this rule only needs to fire for a format-less email-ish field
     // (the default `when` with no `formats` already restricts to format-less nodes).
-    match: /^(email|emailaddress)$/,
+    match: /(^|\.)(email|emailaddress)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).internet.email(),
   },
   {
     name: "contact.phone",
-    match: /^(phone|phonenumber|mobile|telephone|tel)$/,
+    match: /(^|\.)(phone|phonenumber|mobile|telephone|tel)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).phone.number(),
   },
@@ -340,43 +345,43 @@ export const defaultHeuristics: HeuristicRule[] = [
   // --- internet ---
   {
     name: "internet.username",
-    match: /^(username|userid|login|handle)$/,
+    match: /(^|\.)(username|userid|login|handle)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).internet.username(),
   },
   {
     name: "internet.password",
-    match: /^password$/,
+    match: /(^|\.)password$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).internet.password(),
   },
   {
     name: "internet.url",
-    match: /^(url|website|homepage|link)$/,
+    match: /(^|\.)(url|website|homepage|link)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).internet.url(),
   },
   {
     name: "internet.avatar",
-    match: /^(avatar|avatarurl|image|imageurl|photo|photourl|picture|pictureurl)$/,
+    match: /(^|\.)(avatar|avatarurl|image|imageurl|photo|photourl|picture|pictureurl)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).image.avatar(),
   },
   {
     name: "internet.ip",
-    match: /^(ip|ipaddress)$/,
+    match: /(^|\.)(ip|ipaddress)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).internet.ip(),
   },
   {
     name: "internet.userAgent",
-    match: /^(useragent|ua)$/,
+    match: /(^|\.)(useragent|ua)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).internet.userAgent(),
   },
   {
     name: "internet.domain",
-    match: /^domain$/,
+    match: /(^|\.)domain$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).internet.domainName(),
   },
@@ -384,61 +389,75 @@ export const defaultHeuristics: HeuristicRule[] = [
   // --- address ---
   {
     name: "address.street",
-    match: /^(street|streetaddress|address1|addressline1)$/,
+    match: /(^|\.)(street|streetaddress|address1|addressline1)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).location.streetAddress(),
   },
   {
+    name: "address.line",
+    // `line1`/`line2` are address lines only inside an address-shaped parent (shipping/
+    // billing/address) — gate on the nearest ancestor key so a generic `line1` elsewhere
+    // (e.g. a text-diff structure) isn't hijacked into a street address.
+    match: (ctx) => /^line[12]$/.test(ctx.key) && /(address|shipping|billing)/.test(ancestorKeys(ctx)[0] ?? ""),
+    when: { type: "string" },
+    generate: (ctx) => (ctx.key === "line1" ? faker(ctx.backend).location.streetAddress() : faker(ctx.backend).location.secondaryAddress()),
+  },
+  {
     name: "address.street2",
-    match: /^(address2|addressline2)$/,
+    match: /(^|\.)(address2|addressline2)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).location.secondaryAddress(),
   },
   {
     name: "address.city",
-    match: /^(city|town)$/,
+    match: /(^|\.)(city|town)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).location.city(),
   },
   {
     name: "address.state",
-    match: /^(state|province|region)$/,
+    match: /(^|\.)(state|province|region)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).location.state(),
   },
   {
     name: "address.zip",
-    match: /^(zip|zipcode|postalcode|postcode)$/,
+    match: /(^|\.)(zip|zipcode|postalcode|postcode)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).location.zipCode(),
   },
   {
     name: "address.country",
-    match: /^country$/,
+    match: /(^|\.)country$/,
     when: { type: "string" },
-    generate: ({ backend }) => faker(backend).location.country(),
+    // A 2-char-constrained `country` is an ISO alpha-2 code, not a display name —
+    // "Venezuela" would fail the constraint guard and fall through to lorem noise.
+    generate: (ctx) =>
+      ctx.node.maxLength === 2 || ctx.node.minLength === 2
+        ? faker(ctx.backend).location.countryCode("alpha-2")
+        : faker(ctx.backend).location.country(),
   },
   {
     name: "address.countryCode",
-    match: /^countrycode$/,
+    match: /(^|\.)countrycode$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).location.countryCode(),
   },
   {
     name: "address.latitude",
-    match: /^(lat|latitude)$/,
+    match: /(^|\.)(lat|latitude)$/,
     when: { type: "number" },
     generate: ({ backend }) => faker(backend).location.latitude(),
   },
   {
     name: "address.longitude",
-    match: /^(lng|lon|long|longitude)$/,
+    match: /(^|\.)(lng|lon|long|longitude)$/,
     when: { type: "number" },
     generate: ({ backend }) => faker(backend).location.longitude(),
   },
   {
     name: "address.timezone",
-    match: /^(timezone|tz)$/,
+    match: /(^|\.)(timezone|tz)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).location.timeZone(),
   },
@@ -446,13 +465,13 @@ export const defaultHeuristics: HeuristicRule[] = [
   // --- company ---
   {
     name: "company.name",
-    match: /^(companyname|company|organization|org|employer)$/,
+    match: /(^|\.)(companyname|company|organization|org|employer)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).company.name(),
   },
   {
     name: "company.department",
-    match: /^department$/,
+    match: /(^|\.)department$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).commerce.department(),
   },
@@ -460,7 +479,7 @@ export const defaultHeuristics: HeuristicRule[] = [
     name: "company.industry",
     // No dedicated faker.industry-style call exists; commerce.department() doubles as a
     // reasonable business-sector proxy (retail-style categories read plausibly as industries).
-    match: /^industry$/,
+    match: /(^|\.)industry$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).commerce.department(),
   },
@@ -468,25 +487,25 @@ export const defaultHeuristics: HeuristicRule[] = [
   // --- commerce ---
   {
     name: "commerce.productName",
-    match: /^(productname|itemname)$/,
+    match: /(^|\.)(productname|itemname)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).commerce.productName(),
   },
   {
     name: "commerce.price",
-    match: /^(price|amount|cost)$/,
+    match: /(^|\.)(price|amount|cost)$/,
     when: { type: "number" },
     generate: ({ backend }) => Number(faker(backend).commerce.price()),
   },
   {
     name: "commerce.currency",
-    match: /^currency$/,
+    match: /(^|\.)currency$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).finance.currencyCode(),
   },
   {
     name: "commerce.sku",
-    match: /^sku$/,
+    match: /(^|\.)sku$/,
     when: { type: "string" },
     generate: ({ backend }) => {
       const f = faker(backend);
@@ -501,7 +520,7 @@ export const defaultHeuristics: HeuristicRule[] = [
     // signal at all, so guessing "commerce" for a generic field name would be wrong far more
     // often than right.
     name: "text.description",
-    match: /^description$/,
+    match: /(^|\.)description$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).lorem.sentences(2),
   },
@@ -509,25 +528,25 @@ export const defaultHeuristics: HeuristicRule[] = [
   // --- finance ---
   {
     name: "finance.iban",
-    match: /^iban$/,
+    match: /(^|\.)iban$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).finance.iban(),
   },
   {
     name: "finance.creditCard",
-    match: /^(creditcard|creditcardnumber|cardnumber)$/,
+    match: /(^|\.)(creditcard|creditcardnumber|cardnumber)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).finance.creditCardNumber(),
   },
   {
     name: "finance.accountNumber",
-    match: /^(accountnumber|accountno)$/,
+    match: /(^|\.)(accountnumber|accountno)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).finance.accountNumber(),
   },
   {
     name: "finance.bic",
-    match: /^(bic|swift|swiftcode)$/,
+    match: /(^|\.)(bic|swift|swiftcode)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).finance.bic(),
   },
@@ -537,19 +556,19 @@ export const defaultHeuristics: HeuristicRule[] = [
     name: "ids.uuid",
     // Only fires for a format-less field literally named `id`/`uuid` — an explicit
     // `format: 'uuid'` node is already handled by the (guaranteed-valid) format tier.
-    match: /^(id|uuid|guid)$/,
+    match: /(^|\.)(id|uuid|guid)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).string.uuid(),
   },
   {
     name: "ids.slug",
-    match: /^slug$/,
+    match: /(^|\.)slug$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).lorem.slug(),
   },
   {
     name: "dates.createdAt",
-    match: /^createdat$/,
+    match: /(^|\.)createdat$/,
     when: { type: "string" },
     // `date.past()` with no `refDate` defaults to `Date.now()` (upstream faker-js/faker#1870),
     // which would make the same seed produce a different value depending on which day the
@@ -562,19 +581,19 @@ export const defaultHeuristics: HeuristicRule[] = [
   },
   {
     name: "dates.updatedAt",
-    match: /^updatedat$/,
+    match: /(^|\.)updatedat$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).date.recent().toISOString(),
   },
   {
     name: "dates.deletedAt",
-    match: /^deletedat$/,
+    match: /(^|\.)deletedat$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).date.recent().toISOString(),
   },
   {
     name: "dates.birthDate",
-    match: /^(birthdate|dob|dateofbirth)$/,
+    match: /(^|\.)(birthdate|dob|dateofbirth)$/,
     when: { type: "string" },
     // faker's `date.birthdate()` defaults to `mode: 'age', min: 18, max: 80` when no explicit
     // range is given — silently excluding both children and centenarians from any schema using
@@ -592,19 +611,19 @@ export const defaultHeuristics: HeuristicRule[] = [
   // --- media ---
   {
     name: "media.color",
-    match: /^(color|colour|hexcolor)$/,
+    match: /(^|\.)(color|colour|hexcolor)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).color.rgb({ format: "hex" }),
   },
   {
     name: "media.mimeType",
-    match: /^(mimetype|contenttype)$/,
+    match: /(^|\.)(mimetype|contenttype)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).system.mimeType(),
   },
   {
     name: "media.fileName",
-    match: /^(filename|file)$/,
+    match: /(^|\.)(filename|file)$/,
     when: { type: "string" },
     generate: ({ backend }) => faker(backend).system.fileName(),
   },
