@@ -1,5 +1,11 @@
 # standard-schema-faker
 
+## 0.3.1
+
+### Patch Changes
+
+- 6be1ea8: remove stale dev-time artifacts
+
 ## 0.3.0
 
 ### Minor Changes
