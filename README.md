@@ -11,7 +11,9 @@
   />
 </a>
 
-<!-- badges: npm version, CI, license — add once published -->
+[![npm version](https://img.shields.io/npm/v/standard-schema-faker.svg)](https://www.npmjs.com/package/standard-schema-faker)
+[![CI](https://github.com/osbytes/standard-schema-faker/actions/workflows/ci.yml/badge.svg)](https://github.com/osbytes/standard-schema-faker/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/standard-schema-faker.svg)](./LICENSE)
 
 One package, three entry points:
 
@@ -391,7 +393,7 @@ a **heavily reused** FHIR field name (`Coding.system`, `Identifier.system` are u
 URI-valued fields, not contact-kind enums) — reliable ContactPoint detection needs BOTH the
 `system`-enum content check AND an ancestor-name gate (`telecom`/`contact(s)`/`contactPoint(s)`).
 `defaultHeuristics` ships this as three complementary tiers, strongest signal first (simplified
-below for readability — see `packages/faker/src/heuristics.ts` for the exact rules):
+below for readability — see `src/faker/heuristics.ts` for the exact rules):
 
 ```ts
 // 1. Sibling-VALUE-aware (defaultHeuristics, simplified) — reads the ACTUAL generated
@@ -537,7 +539,7 @@ const gen = createFaker({
 
 (Drawing through `ctx.backend.faker` — the call's seeded `Faker` instance, exposed via
 `FakerBackendInstance` — rather than a bare unseeded `@faker-js/faker` import keeps rule output
-fully seeded-deterministic; see `packages/faker/src/heuristics.ts`'s own rules, which do the
+fully seeded-deterministic; see `src/faker/heuristics.ts`'s own rules, which do the
 same via a small `faker(backend)` helper.)
 
 ## Ensuring fields exist (finalize)
@@ -695,15 +697,6 @@ complaint classes in comparable mocking tools:
   value that looks "in bounds" but is actually invalid. This library re-rolls (fresh
   randomness, bounded attempts) until both hold, or gives up and returns the last
   pattern-matching attempt unchanged — never truncated, never padded.
-
-## Status
-
-Pre-release: feature-complete and publish-ready, but **not yet published**. The repository URL
-in `package.json` is a placeholder (the `standard-schema-faker` GitHub org doesn't exist yet),
-and no version has been published to npm. Ships as a single package, `standard-schema-faker`,
-with subpath exports (`.`, `./faker`, and `./chance`) — no `@standard-schema-faker/*` npm scope. A human
-needs to register the npm package name / GitHub org (or point them at real ones) and run the
-actual publish.
 
 ## License
 

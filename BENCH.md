@@ -1,15 +1,15 @@
 # Benchmark: standard-schema-faker vs @anatine/zod-mock
 
-Honest numbers, including where we lose. Measured on the machine this was authored on
-(darwin, Node 22.23.0) — treat as directional, not absolute; re-run `bench/bench.mjs`
+Honest numbers, including where we lose. Measured on darwin, Node 22.23.0 — treat as
+directional, not absolute; re-run `bench/bench.mjs`
 yourself if the numbers matter to a decision.
 
 ## Setup
 
 `@anatine/zod-mock` requires zod v3 (`peerDependencies: { zod: "^3.21.4" }`), incompatible
-with this monorepo's zod v4. The benchmark therefore lives in `bench/`, a **standalone
-directory outside the pnpm workspace** with its own `package.json` and plain `npm install`
-(not a workspace member — see `bench/package.json`'s description). It compares **logically
+with this repo's zod v4. The benchmark therefore lives in `bench/`, a **standalone
+directory** with its own `package.json` and plain `npm install`
+(see `bench/package.json`'s description). It compares **logically
 equivalent** schemas (same fields, same constraints) written against each library's own zod
 major version — the fairest comparison achievable given the peer-dependency conflict, and
 arguably the realistic one: a real project picks one zod major and one mocking library, not
@@ -76,8 +76,7 @@ call.
   walking Zod's native structures.
 - **The zero-dependency default backend is a genuine differentiator** for the "tiny core, no
   install" use case (throwaway fixtures, tests that don't care about realism) — 2x zod-mock's
-  throughput with zero runtime dependencies. If this project ever leans into that as a
-  differentiator, that story has real numbers behind it.
+  throughput with zero runtime dependencies.
 - **Cold start** (single first call in a fresh `node` process — module load + first schema
   conversion + first generation, no warm-up) is roughly comparable across all three: **~2.9ms**
   (dumb backend), **~4.8ms** (fakerBackend — `Faker` instance construction cost), **~2.7ms**
@@ -86,8 +85,9 @@ call.
   usage (test suites, seed scripts) than its first-call latency.
 - These numbers should NOT be read as "don't use standard-schema-faker" — they're read as "the
   universality has a real, measured cost on the zod-only axis where an incumbent already
-  exists." The honest trade-off: differentiate on universality + seeding + input/output; out-
-  *breadth* the zod mockers, don't out-zod them.
+  exists." If you're Zod-only and warm throughput of realistic values is your top concern, a
+  Zod-native mocker may be faster; this library's value is one API across validators, plus
+  seeding and typed output.
 
 ## Reproducing
 
